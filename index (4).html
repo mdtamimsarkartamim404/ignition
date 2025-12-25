@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic 4-Cylinder Ignition Simulation</title>
+    <!-- React and Tailwind CSS CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap');
+        body { font-family: 'Hind Siliguri', sans-serif; background-color: #f1f5f9; }
+        
+        /* Spark Animation */
+        .spark-flash { animation: bolt 0.1s infinite; }
+        @keyframes bolt {
+            0%, 100% { opacity: 0; filter: drop-shadow(0 0 0px #60a5fa); }
+            50% { opacity: 1; filter: drop-shadow(0 0 15px #3b82f6) brightness(1.8); }
+        }
+
+        /* Current Flow (Dotted lines) */
+        .flow-dots { 
+            stroke-dasharray: 8, 12; 
+            animation: move-dots 0.8s linear infinite; 
+        }
+        @keyframes move-dots { 
+            to { stroke-dashoffset: -20; } 
+        }
+
+        /* High Tension Pulse */
+        .ht-pulse { 
+            stroke-dasharray: 5, 30; 
+            animation: move-ht 0.3s linear infinite; 
+        }
+        @keyframes move-ht { 
+            to { stroke-dashoffset: -35; } 
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = window.React;
+
+        const App = () => {
+            const [isOn, setIsOn] = useState(false);
+            const [activePlug, setActivePlug] = useState(-1);
+
+            // Firing Order 1-3-4-2 (Index mapping: 0-2-3-1)
+            const firingOrder = [0, 2, 3, 1]; 
+            
+            useEffect(() => {
+                let interval;
+                if (isOn) {
+                    let step = 0;
+                    interval = setInterval(() => {
+                        setActivePlug(firingOrder[step % 4]);
+                        step++;
+                    }, 500); // 500ms delay per spark
+                } else {
+                    setActivePlug(-1);
+                }
+                return () => clearInterval(interval);
+            }, [isOn]);
+
+            // Realistic Spark Plug Component
+            const SparkPlug = ({ x, y, id, isActive }) => (
+                <g transform={`translate(${x}, ${y})`}>
+                    {/* Metal Threaded Body */}
+                    <path d="M 0 0 L 40 0 L 40 8 L 36 12 L 36 35 L 4 35 L 4 12 L 0 8 Z" fill="#64748b" />
+                    <rect x="4" y="25" width="32" height="4" fill="#475569" />
+                    <rect x="4" y="30" width="32" height="4" fill="#475569" />
+                    
+                    {/* White Insulator (Ribbed) */}
+                    <path d="M 10 -35 L 30 -35 L 32 -10 L 8 -10 Z" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+                    <rect x="12" y="-30" width="16" height="3" fill="#cbd5e1" rx="1" />
+                    <rect x="12" y="-24" width="16" height="3" fill="#cbd5e1" rx="1" />
+                    <rect x="12" y="-18" width="16" height="3" fill="#cbd5e1" rx="1" />
+                    
+                    {/* Top Terminal Nut */}
+                    <rect x="14" y="-45" width="12" height="10" fill="#334155" />
+                    
+                    {/* Ground Electrode (L-shape) */}
+                    <path d="M 12 55 L 28 55 L 28 50" fill="none" stroke="#334155" strokeWidth="2" />
+                    {/* Center Electrode */}
+                    <line x1="20" y1="35" x2="20" y2="48" stroke="#334155" strokeWidth="3" />
+                    
+                    {/* Labels */}
+                    <text x="50" y="20" fill="#1e293b" fontSize="14" fontWeight="bold">Spark Plug #{id}</text>
+                    
+                    {/* Spark Effect */}
+                    {isActive && (
+                        <g className="spark-flash">
+                            <path d="M 20 48 L 15 55 L 25 60 L 20 70" stroke="#60a5fa" strokeWidth="4" fill="none" strokeLinecap="round" />
+                            <circle cx="20" cy="55" r="15" fill="#3b82f6" opacity="0.4" />
+                        </g>
+                    )}
+                </g>
+            );
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
+                    <div className="max-w-6xl w-full bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+                        
+                        {/* Header Section */}
+                        <div className="bg-slate-800 p-8 text-white text-center border-b-4 border-blue-500">
+                            <h1 className="text-4xl font-bold uppercase tracking-tight">Professional 4-Cylinder Ignition Engine Simulation</h1>
+                            <div className="flex justify-center gap-6 mt-3 font-medium text-slate-400">
+                                <span>Firing Order: 1-3-4-2</span>
+                                <span>|</span>
+                                <span>Input: 12V DC</span>
+                                <span>|</span>
+                                <span>Output: 30,000V HT</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-0">
+                            
+                            {/* Detailed Information Panel */}
+                            <div className="lg:col-span-1 p-6 bg-slate-50 border-r border-gray-200 overflow-y-auto max-h-[700px] custom-scrollbar">
+                                <h3 className="text-xl font-bold text-slate-800 mb-6 border-b pb-2 italic">অংশসমূহ ও কার্যপ্রণালী:</h3>
+                                
+                                <div className="space-y-6">
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500">
+                                        <h4 className="font-bold text-red-600 mb-1 underline">১. ব্যাটারি (12V Battery):</h4>
+                                        <p className="text-xs text-gray-600">এটি শক্তির উৎস।</p>
+                                    </div>
+                                    
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-slate-700">
+                                        <h4 className="font-bold text-slate-700 mb-1 underline">২. ইগনিশন সুইচ:</h4>
+                                        <p className="text-xs text-gray-600">সার্কিট অন/অফ করে।</p>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-600">
+                                        <h4 className="font-bold text-blue-600 mb-1 underline">৩. ইগনিশন কয়েল (Coil):</h4>
+                                        <p className="text-xs text-gray-600">ভোল্টেজ ৩০,০০০ ভোল্টে বৃদ্ধি করে।</p>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                                        <h4 className="font-bold text-emerald-600 mb-1 underline">৪. কন্ডেন্সার:</h4>
+                                        <p className="text-xs text-gray-600">সিবি পয়েন্টের স্পার্কিং রোধ করে এবং দ্রুত ভোল্টেজ বৃদ্ধি করে।</p>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-600">
+                                        <h4 className="font-bold text-purple-600 mb-1 underline">৫. ডিস্ট্রিবিউটর:</h4>
+                                        <p className="text-xs text-gray-600">বিদ্যুৎ সঠিক সময়ে সঠিক প্লাগে পাঠায়।</p>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    onClick={() => setIsOn(!isOn)}
+                                    className={`w-full mt-8 py-5 rounded-2xl font-black text-2xl transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 ${isOn ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
+                                >
+                                    <div className={`w-4 h-4 rounded-full bg-white ${isOn ? 'animate-ping' : ''}`}></div>
+                                    {isOn ? "STOP ENGINE" : "START ENGINE"}
+                                </button>
+                            </div>
+
+                            {/* Simulation Canvas Area */}
+                            <div className="lg:col-span-3 bg-white p-4 md:p-8 flex items-center justify-center shadow-inner relative">
+                                <svg viewBox="0 0 900 600" className="w-full h-auto drop-shadow-md">
+                                    
+                                    {/* --- CHASSIS GROUND RAIL --- */}
+                                    <path d="M 60 480 L 60 550 L 800 550" stroke="#475569" strokeWidth="4" fill="none" strokeDasharray="6,6" />
+                                    <text x="350" y="580" fill="#64748b" fontSize="14" fontWeight="bold">CHASSIS GROUND (NEGATIVE)</text>
+
+                                    {/* --- WIRING & FLOW --- */}
+                                    
+                                    {/* Primary Wiring (Red) */}
+                                    <path d="M 120 400 L 120 280 L 180 280" stroke="#ef4444" strokeWidth="5" fill="none" />
+                                    <path d="M 220 280 L 300 280 L 300 350" stroke="#ef4444" strokeWidth="5" fill="none" />
+                                    
+                                    {/* Connection to Condenser and Ground */}
+                                    <path d="M 350 420 L 350 480" stroke="#3b82f6" strokeWidth="4" fill="none" />
+                                    <path d="M 400 420 L 400 480 L 350 480" stroke="#3b82f6" strokeWidth="4" fill="none" />
+
+                                    {isOn && (
+                                        <g>
+                                            <path d="M 120 400 L 120 280 L 180 280" stroke="white" strokeWidth="2" fill="none" className="flow-dots" />
+                                            <path d="M 220 280 L 300 280 L 300 350" stroke="white" strokeWidth="2" fill="none" className="flow-dots" />
+                                        </g>
+                                    )}
+
+                                    {/* High Tension Lead (HT Lead - Purple) */}
+                                    <path d="M 330 380 L 330 150 L 480 150" stroke={isOn ? "#9333ea" : "#94a3b8"} strokeWidth="10" fill="none" />
+                                    {isOn && <path d="M 330 380 L 330 150 L 480 150" stroke="#d8b4fe" strokeWidth="4" fill="none" className="ht-pulse" />}
+
+                                    {/* Distributor to Spark Plugs Wiring */}
+                                    {[0, 1, 2, 3].map(i => (
+                                        <g key={`lead-group-${i}`}>
+                                            <path 
+                                                d={`M 540 ${135 + i*10} C 620 ${135 + i*10} 620 ${100 + i*125} 700 ${100 + i*125}`} 
+                                                stroke={(isOn && activePlug === i) ? "#3b82f6" : "#cbd5e1"} 
+                                                strokeWidth="6" fill="none" 
+                                            />
+                                            <path d={`M 800 ${100 + i*125} L 800 550`} stroke="#475569" strokeWidth="3" fill="none" strokeDasharray="5,5" />
+                                        </g>
+                                    ))}
+
+                                    {/* --- COMPONENTS --- */}
+                                    
+                                    {/* 1. Battery */}
+                                    <g transform="translate(60, 400)">
+                                        <rect width="120" height="85" fill="#b91c1c" rx="12" />
+                                        <rect x="20" y="-15" width="25" height="15" fill="#334155" rx="2" />
+                                        <rect x="75" y="-15" width="25" height="15" fill="#334155" rx="2" />
+                                        <text x="25" y="5" fill="white" fontSize="18" fontWeight="bold">-</text>
+                                        <text x="80" y="5" fill="white" fontSize="18" fontWeight="bold">+</text>
+                                        <text x="35" y="50" fill="white" fontSize="14" fontWeight="bold">Battery</text>
+                                    </g>
+
+                                    {/* 2. Ignition Switch */}
+                                    <g transform="translate(180, 260)">
+                                        <circle cx="20" cy="20" r="22" fill="#1e293b" />
+                                        <line x1="10" y1="20" x2="30" y2="20" stroke="white" strokeWidth="4" strokeLinecap="round" />
+                                        <text x="-15" y="60" fill="#1e293b" fontSize="12" fontWeight="bold">Ignition Switch</text>
+                                    </g>
+
+                                    {/* 3. Ignition Coil */}
+                                    <g transform="translate(280, 350)">
+                                        <rect width="100" height="150" fill="#2563eb" rx="20" />
+                                        <circle cx="50" cy="0" r="20" fill="#1e40af" />
+                                        <text x="30" y="85" fill="white" fontSize="20" fontWeight="bold">Coil</text>
+                                        <text x="-40" y="165" fill="#1e40af" fontSize="14" fontWeight="bold">Ignition Coil</text>
+                                    </g>
+
+                                    {/* 4. Condenser (New Part Added next to coil) */}
+                                    <g transform="translate(385, 380)">
+                                        <rect width="35" height="50" fill="#10b981" rx="4" />
+                                        <text x="-10" y="70" fill="#065f46" fontSize="12" fontWeight="bold">Condenser</text>
+                                    </g>
+
+                                    {/* 5. Distributor */}
+                                    <g transform="translate(480, 150)">
+                                        <circle r="70" fill="#7e22ce" stroke="#581c87" strokeWidth="5" />
+                                        <circle r="15" fill="#1e1b4b" />
+                                        <text x="-40" y="100" fill="#6b21a8" fontSize="14" fontWeight="bold">Distributor</text>
+                                        {[0,1,2,3].map(i => <circle key={`c-${i}`} cx="60" cy={-15 + i*10} r="7" fill="#1e293b" />)}
+                                        {isOn && (
+                                            <line x1="0" y1="0" x2="60" y2={-15 + firingOrder.indexOf(activePlug)*10} 
+                                                  stroke="#fbbf24" strokeWidth="6" className="spark-flash" strokeLinecap="round" />
+                                        )}
+                                    </g>
+
+                                    {/* 6. Realistic Spark Plugs */}
+                                    <SparkPlug x={700} y={100} id={1} isActive={isOn && activePlug === 0} />
+                                    <SparkPlug x={700} y={225} id={2} isActive={isOn && activePlug === 1} />
+                                    <SparkPlug x={700} y={350} id={3} isActive={isOn && activePlug === 2} />
+                                    <SparkPlug x={700} y={475} id={4} isActive={isOn && activePlug === 3} />
+
+                                </svg>
+                            </div>
+                        </div>
+
+                        {/* Analysis Footer Section */}
+                        <div className="bg-slate-900 p-10 grid grid-cols-1 md:grid-cols-2 gap-10 text-white border-t border-slate-700">
+                            <div>
+                                <h4 className="text-2xl font-bold text-blue-400 mb-4 border-b border-blue-800 pb-2 flex items-center gap-2">
+                                    <span className="bg-blue-600 px-3 py-1 rounded text-sm">A</span> 
+                                    ফায়ারিং লজিক (Firing Logic):
+                                </h4>
+                                <p className="text-slate-400 leading-relaxed italic text-sm">
+                                    এই সিমুলেশনে **১-৩-৪-২** ফায়ারিং অর্ডার অনুসরণ করা হচ্ছে। ডিস্ট্রিবিউটর রোটরটি সঠিক প্লাগে কারেন্ট পৌঁছে দিয়ে এই ধারাবাহিকতা রক্ষা করে।
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-bold text-emerald-400 mb-4 border-b border-emerald-800 pb-2 flex items-center gap-2">
+                                    <span className="bg-emerald-600 px-3 py-1 rounded text-sm">B</span> 
+                                    কন্ডেন্সারের কাজ:
+                                </h4>
+                                <p className="text-slate-400 leading-relaxed italic text-sm">
+                                    কন্ডেন্সারটি ইগনিশন কয়েলের প্রাইমারি সার্কিটের সাথে যুক্ত থাকে। এটি সিবি পয়েন্টের কন্টাক্ট খোলার সময় আর্কিং রোধ করে এবং সেকেন্ডারি উইন্ডিংয়ে দ্রুত হাই-ভোল্টেজ তৈরিতে সাহায্য করে।
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Project Brand Footer */}
+                        <div className="bg-slate-950 p-6 text-center text-slate-500 text-xs font-bold tracking-[0.2em] uppercase">
+                            Automobile Engineering Lab Project | Mirpur BG TTC | © 2024-2025
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
